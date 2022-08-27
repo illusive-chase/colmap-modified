@@ -308,7 +308,8 @@ IncrementalMapperController::IncrementalMapperController(
     : options_(options),
       image_path_(image_path),
       database_path_(database_path),
-      reconstruction_manager_(reconstruction_manager) {
+      reconstruction_manager_(reconstruction_manager),
+      client_(nullptr) {
   CHECK(options_->Check());
   RegisterCallback(INITIAL_IMAGE_PAIR_REG_CALLBACK);
   RegisterCallback(NEXT_IMAGE_REG_CALLBACK);
@@ -319,6 +320,13 @@ void IncrementalMapperController::Run() {
   if (!LoadDatabase()) {
     return;
   }
+
+  if (options_->tcp_port != -1) {
+    client_ = new mod::TCPClient("127.0.0.1", options_->tcp_port);
+    if (!client_->Connected()) return;
+    PrintHeading1(StringPrintf("Connected to 127.0.0.1:%d", options_->tcp_port));
+  }
+
 
   IncrementalMapper::Options init_mapper_options = options_->Mapper();
   Reconstruct(init_mapper_options);
@@ -331,6 +339,10 @@ void IncrementalMapperController::Run() {
 
     std::cout << "  => Relaxing the initialization constraints." << std::endl;
     init_mapper_options.init_min_num_inliers /= 2;
+    if (!client_->RelaxAndRestart(
+      &init_mapper_options.init_min_num_inliers,
+      &init_mapper_options.init_min_tri_angle
+    )) break;
     Reconstruct(init_mapper_options);
 
     if (reconstruction_manager_->Size() > 0 || IsStopped()) {
@@ -339,11 +351,17 @@ void IncrementalMapperController::Run() {
 
     std::cout << "  => Relaxing the initialization constraints." << std::endl;
     init_mapper_options.init_min_tri_angle /= 2;
+    if (!client_->RelaxAndRestart(
+      &init_mapper_options.init_min_num_inliers,
+      &init_mapper_options.init_min_tri_angle
+    )) break;
     Reconstruct(init_mapper_options);
   }
 
   std::cout << std::endl;
   GetTimer().PrintMinutes();
+
+  if (client_) delete client_;
 }
 
 bool IncrementalMapperController::LoadDatabase() {
@@ -416,6 +434,10 @@ void IncrementalMapperController::Reconstruct(
         reconstruction_manager_->Get(reconstruction_idx);
 
     mapper.BeginReconstruction(&reconstruction);
+    if (client_) {
+      client_->BeginReconstruction(num_trials);
+      if (client_->Abort()) break;
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     // Register initial pair
@@ -425,9 +447,12 @@ void IncrementalMapperController::Reconstruct(
       image_t image_id1 = static_cast<image_t>(options_->init_image_id1);
       image_t image_id2 = static_cast<image_t>(options_->init_image_id2);
 
+      if (client_) client_->FindInitialImagePair(&image_id1, &image_id2);
+
       // Try to find good initial pair.
       if (options_->init_image_id1 == -1 || options_->init_image_id2 == -1) {
         PrintHeading1("Finding good initial image pair");
+        
         const bool find_init_success = mapper.FindInitialImagePair(
             init_mapper_options, &image_id1, &image_id2);
         if (!find_init_success) {
@@ -449,11 +474,15 @@ void IncrementalMapperController::Reconstruct(
         }
       }
 
+      if (client_) client_->InitializeWithImagePair(image_id1, image_id2);
+
       PrintHeading1(StringPrintf("Initializing with image pair #%d and #%d",
                                  image_id1, image_id2));
       const bool reg_init_success = mapper.RegisterInitialImagePair(
           init_mapper_options, image_id1, image_id2);
       if (!reg_init_success) {
+        if (client_)
+          client_->FailInitialization(image_id1, image_id2, init_mapper_options.init_min_tri_angle, init_mapper_options.init_min_num_inliers);
         std::cout << "  => Initialization failed - possible solutions:"
                   << std::endl
                   << "     - try to relax the initialization constraints"
@@ -472,6 +501,8 @@ void IncrementalMapperController::Reconstruct(
       // Initial image pair failed to register.
       if (reconstruction.NumRegImages() == 0 ||
           reconstruction.NumPoints3D() == 0) {
+        if (client_)
+          client_->FailInitialRegistration(image_id1, image_id2, reconstruction.NumRegImages(), reconstruction.NumPoints3D());
         mapper.EndReconstruction(kDiscardReconstruction);
         reconstruction_manager_->Delete(reconstruction_idx);
         // If both initial images are manually specified, there is no need for
@@ -508,15 +539,20 @@ void IncrementalMapperController::Reconstruct(
 
       reg_next_success = false;
 
-      const std::vector<image_t> next_images =
-          mapper.FindNextImages(options_->Mapper());
+      const std::vector<image_t> next_images = mapper.FindNextImages(options_->Mapper());
+
+      if (client_) client_->FindNextImages(next_images);
 
       if (next_images.empty()) {
         break;
       }
 
       for (size_t reg_trial = 0; reg_trial < next_images.size(); ++reg_trial) {
-        const image_t next_image_id = next_images[reg_trial];
+        image_t next_image_id = next_images[reg_trial];
+
+        if (client_)
+          client_->RegisterNextImage(&next_image_id, reconstruction.NumRegImages());
+
         const Image& next_image = reconstruction.Image(next_image_id);
 
         PrintHeading1(StringPrintf("Registering image #%d (%d)", next_image_id,
@@ -547,6 +583,9 @@ void IncrementalMapperController::Reconstruct(
             ba_prev_num_reg_images = reconstruction.NumRegImages();
           }
 
+          if (client_)
+            client_->SucceedRegistration(reconstruction.NumRegImages(), reconstruction.NumPoints3D());
+
           if (options_->extract_colors) {
             ExtractColors(image_path_, next_image_id, &reconstruction);
           }
@@ -563,6 +602,10 @@ void IncrementalMapperController::Reconstruct(
 
           break;
         } else {
+          if (client_) {
+            client_->FailRegistration(reg_trial, reconstruction.NumRegImages());
+            if (client_->GiveUp()) break;
+          }
           std::cout << "  => Could not register, trying another image."
                     << std::endl;
 
@@ -582,6 +625,9 @@ void IncrementalMapperController::Reconstruct(
       if (mapper.NumSharedRegImages() >= max_model_overlap) {
         break;
       }
+
+      if (client_)
+        client_->FailAllRegistration(&reg_next_success, &prev_reg_next_success);
 
       // If no image could be registered, try a single final global iterative
       // bundle adjustment and try again to register one image. If this fails
@@ -606,6 +652,11 @@ void IncrementalMapperController::Reconstruct(
         reconstruction.NumRegImages() != ba_prev_num_reg_images &&
         reconstruction.NumPoints3D() != ba_prev_num_points) {
       IterativeGlobalRefinement(*options_, &mapper);
+    }
+
+    if (client_) {
+      client_->EndReconstruction(num_trials, reconstruction.NumRegImages(), reconstruction.NumPoints3D());
+      if (client_->Abort()) break;
     }
 
     // If the total number of images is small then do not enforce the minimum

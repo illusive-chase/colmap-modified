@@ -351,13 +351,15 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
   Image& image = reconstruction_->Image(image_id);
   Camera& camera = reconstruction_->Camera(image.CameraId());
 
-  CHECK(!image.IsRegistered()) << "Image cannot be registered multiple times";
+  CHECK(!image.IsRegistered()) << "  => Image cannot be registered multiple times";
 
   num_reg_trials_[image_id] += 1;
 
   // Check if enough 2D-3D correspondences.
   if (image.NumVisiblePoints3D() <
       static_cast<size_t>(options.abs_pose_min_num_inliers)) {
+    std::cout << "  => Image " << image_id << " fails because of not enough visible 3D points" << std::endl;
+    std::cout << "     " << image.NumVisiblePoints3D() << " < " << options.abs_pose_min_num_inliers  << std::endl;
     return false;
   }
 
@@ -423,6 +425,8 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
   // hence we skip some of the 2D-3D correspondences.
   if (tri_points2D.size() <
       static_cast<size_t>(options.abs_pose_min_num_inliers)) {
+    std::cout << "  => Image " << image_id << " fails because of not enough trianglated 2D points" << std::endl;
+    std::cout << "     " << tri_points2D.size() << " < " << options.abs_pose_min_num_inliers  << std::endl;
     return false;
   }
 
@@ -491,10 +495,13 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
   if (!EstimateAbsolutePose(abs_pose_options, tri_points2D, tri_points3D,
                             &image.Qvec(), &image.Tvec(), &camera, &num_inliers,
                             &inlier_mask)) {
+    std::cout << "Image " << image_id << " fails because of pose estimation failure" << std::endl;
     return false;
   }
 
   if (num_inliers < static_cast<size_t>(options.abs_pose_min_num_inliers)) {
+    std::cout << "Image " << image_id << " fails because of not enough inliers" << std::endl;
+    std::cout << "     " << num_inliers << " < " << options.abs_pose_min_num_inliers  << std::endl;
     return false;
   }
 
@@ -505,6 +512,7 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
   if (!RefineAbsolutePose(abs_pose_refinement_options, inlier_mask,
                           tri_points2D, tri_points3D, &image.Qvec(),
                           &image.Tvec(), &camera)) {
+    std::cout << "  => Image " << image_id << " fails because of pose refinement failure" << std::endl;
     return false;
   }
 

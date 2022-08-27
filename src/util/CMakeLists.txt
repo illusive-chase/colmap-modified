@@ -44,6 +44,7 @@ COLMAP_ADD_SOURCES(
     option_manager.h option_manager.cc
     ply.h ply.cc
     random.h random.cc
+    socket.h socket.cc
     sqlite3_utils.h
     string.h string.cc
     threading.h threading.cc

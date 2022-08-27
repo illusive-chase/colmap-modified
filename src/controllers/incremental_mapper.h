@@ -35,11 +35,16 @@
 #include "base/reconstruction_manager.h"
 #include "sfm/incremental_mapper.h"
 #include "util/threading.h"
+#include "util/socket.h"
 
 namespace colmap {
 
 struct IncrementalMapperOptions {
  public:
+
+  // The port used to interact
+  int tcp_port = -1;
+
   // The minimum number of matches for inlier matches to be considered.
   int min_num_matches = 15;
 
@@ -182,6 +187,7 @@ class IncrementalMapperController : public Thread {
   const std::string database_path_;
   ReconstructionManager* reconstruction_manager_;
   DatabaseCache database_cache_;
+  mod::TCPClient* client_;
 };
 
 // Globally filter points and images in mapper.

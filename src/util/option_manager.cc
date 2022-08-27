@@ -475,6 +475,8 @@ void OptionManager::AddMapperOptions() {
   }
   added_mapper_options_ = true;
 
+  AddAndRegisterDefaultOption("Mapper.tcp_port",
+                              &mapper->tcp_port);
   AddAndRegisterDefaultOption("Mapper.min_num_matches",
                               &mapper->min_num_matches);
   AddAndRegisterDefaultOption("Mapper.ignore_watermarks",
