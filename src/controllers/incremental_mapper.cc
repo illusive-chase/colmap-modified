@@ -339,7 +339,7 @@ void IncrementalMapperController::Run() {
 
     std::cout << "  => Relaxing the initialization constraints." << std::endl;
     init_mapper_options.init_min_num_inliers /= 2;
-    if (!client_->RelaxAndRestart(
+    if (client_ && !client_->RelaxAndRestart(
       &init_mapper_options.init_min_num_inliers,
       &init_mapper_options.init_min_tri_angle
     )) break;
@@ -351,7 +351,7 @@ void IncrementalMapperController::Run() {
 
     std::cout << "  => Relaxing the initialization constraints." << std::endl;
     init_mapper_options.init_min_tri_angle /= 2;
-    if (!client_->RelaxAndRestart(
+    if (client_ && !client_->RelaxAndRestart(
       &init_mapper_options.init_min_num_inliers,
       &init_mapper_options.init_min_tri_angle
     )) break;
