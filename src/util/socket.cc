@@ -119,7 +119,7 @@ namespace mod {
   void TCPClient::BeginReconstruction(int num_init_trials) {
     socket.send(Concat(
       "[Begin Reconstruction]\n",
-      "    This is ", num_init_trials, "th initial trial.\n"
+      "    This is ", num_init_trials + 1, "th initial trial.\n"
     ));
     Validate("acknowledge");
   }
@@ -216,9 +216,19 @@ namespace mod {
     return true;
   }
 
+  void TCPClient::SucceedInitialRegistration(uint32_t img1, uint32_t img2, int num_reg_images, int num_points_3d) {
+    socket.send(Concat(
+      "[Succeed Initial Registration]{", img1, ",", img2, "}\n",
+      "    Used pair #", img1, ", #", img2, ".\n",
+      "    Registered images: ", num_reg_images, ".\n",
+      "    Fused 3d points: ", num_points_3d, ".\n"
+    ));
+    Validate("acknowledge");
+  }
+
   void TCPClient::FailInitialRegistration(uint32_t img1, uint32_t img2, int num_reg_images, int num_points_3d) {
     socket.send(Concat(
-      "[Fail Initial Registration]\n",
+      "[Fail Initial Registration]{", img1, ",", img2, "}\n",
       "    Used pair #", img1, ", #", img2, ".\n",
       "    Registered images: ", num_reg_images, ".\n",
       "    Fused 3d points: ", num_points_3d, ".\n"
@@ -231,7 +241,7 @@ namespace mod {
     for (uint32_t id: next_images) ids = Concat(ids, id, ",");
     if (ids.length()) ids.pop_back();
     socket.send(Concat(
-      "[Find Next Images]\n",
+      "[Find Next Images]{", ids, "}\n",
       "    Next images to use: [", ids, "].\n"
     ));
     Validate("acknowledge");
@@ -256,19 +266,19 @@ namespace mod {
     Validate("acknowledge");
   }
 
-  void TCPClient::SucceedRegistration(int num_reg_images, int num_points_3d) {
+  void TCPClient::SucceedRegistration(uint32_t image_id, int num_reg_images, int num_points_3d) {
     socket.send(Concat(
-      "[Succeed Registration]\n",
+      "[Succeed Registration]{", image_id, "}\n",
       "    ", num_reg_images, " images are already registered.\n",
       "    ", num_points_3d, " 3d points are already fused.\n"
     ));
     Validate("acknowledge");
   }
 
-  void TCPClient::FailRegistration(int num_reg_trials, int num_reg_images) {
+  void TCPClient::FailRegistration(uint32_t image_id, int num_reg_trials, int num_reg_images) {
     socket.send(Concat(
-      "[Fail Registration]\n",
-      "    This is ", num_reg_trials, "th register trial.\n",
+      "[Fail Registration]{", image_id, "}\n",
+      "    This is ", num_reg_trials + 1, "th register trial.\n",
       "    ", num_reg_images, " images are already registered.\n"
     ));
     Validate("acknowledge");
@@ -277,11 +287,11 @@ namespace mod {
   bool TCPClient::GiveUp() {
     socket.send(Concat(
       "[Give Up]\n",
-      "    Do you want to give up any reconstruction? 'q' or 'quit' to give up.\n",
+      "    Do you want to give up registering rest images? y/n\n",
       "    Anything else for not.\n"
     ));
     std::string resp = socket.recv();
-    if (resp != "q" && resp != "quit") {
+    if (resp != "y" && resp != "yes") {
       socket.send("    Continue...\n");
       Validate("acknowledge");
       return false;
@@ -322,7 +332,7 @@ namespace mod {
   void TCPClient::EndReconstruction(int num_init_trials, int num_reg_images, int num_points_3d) {
     socket.send(Concat(
       "[End Reconstruction]\n",
-      "    This is ", num_init_trials, "th initial trial.\n",
+      "    This is ", num_init_trials + 1, "th initial trial.\n",
       "    ", num_reg_images, " images are registered.\n"
       "    ", num_points_3d, " 3d points are fused.\n"
     ));

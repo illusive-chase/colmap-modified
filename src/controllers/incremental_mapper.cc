@@ -514,6 +514,9 @@ void IncrementalMapperController::Reconstruct(
         }
       }
 
+      if (client_)
+        client_->SucceedInitialRegistration(image_id1, image_id2, reconstruction.NumRegImages(), reconstruction.NumPoints3D());
+
       if (options_->extract_colors) {
         ExtractColors(image_path_, image_id1, &reconstruction);
       }
@@ -584,7 +587,7 @@ void IncrementalMapperController::Reconstruct(
           }
 
           if (client_)
-            client_->SucceedRegistration(reconstruction.NumRegImages(), reconstruction.NumPoints3D());
+            client_->SucceedRegistration(next_image_id, reconstruction.NumRegImages(), reconstruction.NumPoints3D());
 
           if (options_->extract_colors) {
             ExtractColors(image_path_, next_image_id, &reconstruction);
@@ -603,7 +606,7 @@ void IncrementalMapperController::Reconstruct(
           break;
         } else {
           if (client_) {
-            client_->FailRegistration(reg_trial, reconstruction.NumRegImages());
+            client_->FailRegistration(next_image_id, reg_trial, reconstruction.NumRegImages());
             if (client_->GiveUp()) break;
           }
           std::cout << "  => Could not register, trying another image."
