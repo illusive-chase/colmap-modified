@@ -38,6 +38,7 @@
 #include "optim/bundle_adjustment.h"
 #include "sfm/incremental_triangulator.h"
 #include "util/alignment.h"
+#include "util/socket.h"
 
 namespace colmap {
 
@@ -168,11 +169,11 @@ class IncrementalMapper {
 
   // Attempt to seed the reconstruction from an image pair.
   bool RegisterInitialImagePair(const Options& options, const image_t image_id1,
-                                const image_t image_id2);
+                                const image_t image_id2, mod::TCPClient* client);
 
   // Attempt to register image to the existing model. This requires that
   // a previous call to `RegisterInitialImagePair` was successful.
-  bool RegisterNextImage(const Options& options, const image_t image_id);
+  bool RegisterNextImage(const Options& options, const image_t image_id, mod::TCPClient* client);
 
   // Triangulate observations of image.
   size_t TriangulateImage(const IncrementalTriangulator::Options& tri_options,

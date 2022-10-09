@@ -296,7 +296,7 @@ int RunImageRegistrator(int argc, char** argv) {
               << " / " << image.second.NumObservations() << " points"
               << std::endl;
 
-    mapper.RegisterNextImage(mapper_options, image.first);
+    mapper.RegisterNextImage(mapper_options, image.first, nullptr);
   }
 
   const bool kDiscardReconstruction = false;

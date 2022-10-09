@@ -28,10 +28,11 @@ public:
 class TCPClient {
 private:
   Socket socket;
+  bool normal_log, failure_log;
   void Validate(const char* expected);
 
 public:
-  TCPClient(const std::string& address, int port);
+  TCPClient(const std::string& address, int port, bool normal_log = true, bool failure_log = true);
   TCPClient(const TCPClient&) = delete;
   bool Connected() const;
 
@@ -50,6 +51,14 @@ public:
   bool GiveUp();
   void FailAllRegistration(bool* reg_next_success, bool* prev_reg_next_success);
   void EndReconstruction(int num_init_trials, int num_reg_images, int num_points_3d);
+
+  void FailDueToBadOverlap(uint32_t img1, uint32_t img2);
+  void FailDueToLittleTriAngle(uint32_t img1, uint32_t img2);
+  void FailDueToLittleVisible3DPoints(uint32_t img, const std::vector<double>& xys);
+  void FailDueToLittleTri2DPoints(uint32_t img, const std::vector<double>& xys);
+  void FailDueToBadPoseEstimation(uint32_t img);
+  void FailDueToLittle2DInliers(uint32_t img, const std::vector<double>& xys);
+  void FailDueToBadPoseRefinement(uint32_t img);
 };
 
 } // namespace mod

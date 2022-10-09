@@ -322,7 +322,7 @@ void IncrementalMapperController::Run() {
   }
 
   if (options_->tcp_port != -1) {
-    client_ = new mod::TCPClient("127.0.0.1", options_->tcp_port);
+    client_ = new mod::TCPClient("127.0.0.1", options_->tcp_port, false);
     if (!client_->Connected()) return;
     PrintHeading1(StringPrintf("Connected to 127.0.0.1:%d", options_->tcp_port));
   }
@@ -479,7 +479,7 @@ void IncrementalMapperController::Reconstruct(
       PrintHeading1(StringPrintf("Initializing with image pair #%d and #%d",
                                  image_id1, image_id2));
       const bool reg_init_success = mapper.RegisterInitialImagePair(
-          init_mapper_options, image_id1, image_id2);
+          init_mapper_options, image_id1, image_id2, client_);
       if (!reg_init_success) {
         if (client_)
           client_->FailInitialization(image_id1, image_id2, init_mapper_options.init_min_tri_angle, init_mapper_options.init_min_num_inliers);
@@ -501,8 +501,10 @@ void IncrementalMapperController::Reconstruct(
       // Initial image pair failed to register.
       if (reconstruction.NumRegImages() == 0 ||
           reconstruction.NumPoints3D() == 0) {
-        if (client_)
+        if (client_) {
           client_->FailInitialRegistration(image_id1, image_id2, reconstruction.NumRegImages(), reconstruction.NumPoints3D());
+          client_->FailDueToLittleTriAngle(image_id1, image_id2);
+        }
         mapper.EndReconstruction(kDiscardReconstruction);
         reconstruction_manager_->Delete(reconstruction_idx);
         // If both initial images are manually specified, there is no need for
@@ -567,7 +569,7 @@ void IncrementalMapperController::Reconstruct(
                   << std::endl;
 
         reg_next_success =
-            mapper.RegisterNextImage(options_->Mapper(), next_image_id);
+            mapper.RegisterNextImage(options_->Mapper(), next_image_id, client_);
 
         if (reg_next_success) {
           TriangulateImage(*options_, next_image, &mapper);

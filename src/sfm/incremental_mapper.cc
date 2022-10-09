@@ -257,7 +257,8 @@ std::vector<image_t> IncrementalMapper::FindNextImages(const Options& options) {
 
 bool IncrementalMapper::RegisterInitialImagePair(const Options& options,
                                                  const image_t image_id1,
-                                                 const image_t image_id2) {
+                                                 const image_t image_id2,
+                                                 mod::TCPClient* client) {
   CHECK_NOTNULL(reconstruction_);
   CHECK_EQ(reconstruction_->NumRegImages(), 0);
 
@@ -283,6 +284,7 @@ bool IncrementalMapper::RegisterInitialImagePair(const Options& options,
   //////////////////////////////////////////////////////////////////////////////
 
   if (!EstimateInitialTwoViewGeometry(options, image_id1, image_id2)) {
+    if (client) client->FailDueToBadOverlap(image_id1, image_id2);
     return false;
   }
 
@@ -342,7 +344,8 @@ bool IncrementalMapper::RegisterInitialImagePair(const Options& options,
 }
 
 bool IncrementalMapper::RegisterNextImage(const Options& options,
-                                          const image_t image_id) {
+                                          const image_t image_id,
+                                          mod::TCPClient* client) {
   CHECK_NOTNULL(reconstruction_);
   CHECK_GE(reconstruction_->NumRegImages(), 2);
 
@@ -356,12 +359,15 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
   num_reg_trials_[image_id] += 1;
 
   // Check if enough 2D-3D correspondences.
-  if (image.NumVisiblePoints3D() <
-      static_cast<size_t>(options.abs_pose_min_num_inliers)) {
-    std::cout << "  => Image " << image_id << " fails because of not enough visible 3D points" << std::endl;
-    std::cout << "     " << image.NumVisiblePoints3D() << " < " << options.abs_pose_min_num_inliers  << std::endl;
-    return false;
-  }
+  const bool not_enough_visible_3D_points = image.NumVisiblePoints3D() <
+    static_cast<size_t>(options.abs_pose_min_num_inliers);
+  // if (image.NumVisiblePoints3D() <
+  //     static_cast<size_t>(options.abs_pose_min_num_inliers)) {
+  //   std::cout << "  => Image " << image_id << " fails because of not enough visible 3D points" << std::endl;
+  //   std::cout << "     " << image.NumVisiblePoints3D() << " < " << options.abs_pose_min_num_inliers  << std::endl;
+  //   if (client) client->FailDueToLittleVisible3DPoints(image_id);
+  //   return false;
+  // }
 
   //////////////////////////////////////////////////////////////////////////////
   // Search for 2D-3D correspondences
@@ -427,6 +433,15 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
       static_cast<size_t>(options.abs_pose_min_num_inliers)) {
     std::cout << "  => Image " << image_id << " fails because of not enough trianglated 2D points" << std::endl;
     std::cout << "     " << tri_points2D.size() << " < " << options.abs_pose_min_num_inliers  << std::endl;
+    if (client) {
+      std::vector<double> xys;
+      for (const auto& p : tri_points2D) {
+        xys.push_back(p(0));
+        xys.push_back(p(1));
+      }
+      if (not_enough_visible_3D_points) client->FailDueToLittleVisible3DPoints(image_id, xys);
+      else client->FailDueToLittleTri2DPoints(image_id, xys);
+    };
     return false;
   }
 
@@ -496,12 +511,23 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
                             &image.Qvec(), &image.Tvec(), &camera, &num_inliers,
                             &inlier_mask)) {
     std::cout << "Image " << image_id << " fails because of pose estimation failure" << std::endl;
+    if (client) client->FailDueToBadPoseEstimation(image_id);
     return false;
   }
 
   if (num_inliers < static_cast<size_t>(options.abs_pose_min_num_inliers)) {
     std::cout << "Image " << image_id << " fails because of not enough inliers" << std::endl;
     std::cout << "     " << num_inliers << " < " << options.abs_pose_min_num_inliers  << std::endl;
+    if (client) {
+      std::vector<double> xys;
+      CHECK_EQ(tri_points2D.size(), inlier_mask.size());
+      for (size_t i = 0; i < tri_points2D.size(); ++i) {
+        if (!inlier_mask[i]) continue;
+        xys.push_back(tri_points2D[i](0));
+        xys.push_back(tri_points2D[i](1));
+      }
+      client->FailDueToLittle2DInliers(image_id, xys);
+    }
     return false;
   }
 
@@ -513,6 +539,7 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
                           tri_points2D, tri_points3D, &image.Qvec(),
                           &image.Tvec(), &camera)) {
     std::cout << "  => Image " << image_id << " fails because of pose refinement failure" << std::endl;
+    if (client) client->FailDueToBadPoseRefinement(image_id);
     return false;
   }
 

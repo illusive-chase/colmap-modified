@@ -130,7 +130,7 @@ std::vector<PlyPoint> ReadPly(const std::string& path) {
     if (line_elems.size() >= 3 && line_elems[0] == "property") {
       CHECK(line_elems[1] == "float" || line_elems[1] == "float32" ||
             line_elems[1] == "double" || line_elems[1] == "float64" ||
-            line_elems[1] == "uchar")
+            line_elems[1] == "uchar" || line_elems[1] == "uint8")
           << "PLY import only supports float, double, and uchar data types";
 
       if (line == "property float x" || line == "property float32 x" ||
@@ -169,19 +169,31 @@ std::vector<PlyPoint> ReadPly(const std::string& path) {
       } else if (line == "property uchar r" || line == "property uchar red" ||
                  line == "property uchar diffuse_red" ||
                  line == "property uchar ambient_red" ||
-                 line == "property uchar specular_red") {
+                 line == "property uchar specular_red" ||
+                 line == "property uint8 r" || line == "property uint8 red" ||
+                 line == "property uint8 diffuse_red" ||
+                 line == "property uint8 ambient_red" ||
+                 line == "property uint8 specular_red") {
         R_index = index;
         R_byte_pos = num_bytes_per_line;
       } else if (line == "property uchar g" || line == "property uchar green" ||
                  line == "property uchar diffuse_green" ||
                  line == "property uchar ambient_green" ||
-                 line == "property uchar specular_green") {
+                 line == "property uchar specular_green" || 
+                 line == "property uint8 g" || line == "property uint8 green" ||
+                 line == "property uint8 diffuse_green" ||
+                 line == "property uint8 ambient_green" ||
+                 line == "property uint8 specular_green") {
         G_index = index;
         G_byte_pos = num_bytes_per_line;
       } else if (line == "property uchar b" || line == "property uchar blue" ||
                  line == "property uchar diffuse_blue" ||
                  line == "property uchar ambient_blue" ||
-                 line == "property uchar specular_blue") {
+                 line == "property uchar specular_blue" ||
+                line == "property uint8 b" || line == "property uint8 blue" ||
+                 line == "property uint8 diffuse_blue" ||
+                 line == "property uint8 ambient_blue" ||
+                 line == "property uint8 specular_blue") {
         B_index = index;
         B_byte_pos = num_bytes_per_line;
       }
@@ -191,7 +203,7 @@ std::vector<PlyPoint> ReadPly(const std::string& path) {
         num_bytes_per_line += 4;
       } else if (line_elems[1] == "double" || line_elems[1] == "float64") {
         num_bytes_per_line += 8;
-      } else if (line_elems[1] == "uchar") {
+      } else if (line_elems[1] == "uchar" || line_elems[1] == "uint8") {
         num_bytes_per_line += 1;
       } else {
         LOG(FATAL) << "Invalid data type: " << line_elems[1];

@@ -99,7 +99,7 @@ namespace mod {
   }
 
 
-  TCPClient::TCPClient(const std::string& address, int port): socket(address, port) {
+  TCPClient::TCPClient(const std::string& address, int port, bool normal_log, bool failure_log): socket(address, port), normal_log(normal_log), failure_log(failure_log) {
     if (socket.connected()) {
       socket.send("connected");
       Validate("acknowledge");
@@ -117,6 +117,7 @@ namespace mod {
 
 
   void TCPClient::BeginReconstruction(int num_init_trials) {
+    if (!normal_log) return;
     socket.send(Concat(
       "[Begin Reconstruction]\n",
       "    This is ", num_init_trials + 1, "th initial trial.\n"
@@ -125,6 +126,7 @@ namespace mod {
   }
 
   bool TCPClient::Abort() {
+    if (!normal_log) return false;
     socket.send(Concat(
       "[Abort]\n",
       "    Do you want to abort this reconstruction? y/n\n"
@@ -141,6 +143,7 @@ namespace mod {
   }
 
   void TCPClient::FindInitialImagePair(uint32_t* img1, uint32_t* img2) {
+    if (!normal_log) return;
     if (*img1 == ~0U || *img2 == ~0U) {
       socket.send(Concat(
         "[Find Initial Image Pair]\n",
@@ -168,6 +171,7 @@ namespace mod {
   }
 
   void TCPClient::InitializeWithImagePair(uint32_t img1, uint32_t img2) {
+    if (!normal_log) return;
     socket.send(Concat(
       "[Initialize With ImagePair]\n",
       "    To use pair #", img1, ", #", img2, ".\n"
@@ -176,6 +180,7 @@ namespace mod {
   }
 
   void TCPClient::FailInitialization(uint32_t img1, uint32_t img2, double min_tri_angle, int min_num_inliers) {
+    if (!normal_log) return;
     socket.send(Concat(
       "[Fail Initialization]\n",
       "    Used pair #", img1, ", #", img2, ".\n",
@@ -186,6 +191,7 @@ namespace mod {
   }
 
   bool TCPClient::RelaxAndRestart(int* min_num_inliers, double* min_tri_angle) {
+    if (!normal_log) return false;
     socket.send(Concat(
       "[Relax And Restart]\n",
       "    To use min_tri_angle = ", *min_tri_angle, ".\n",
@@ -217,6 +223,7 @@ namespace mod {
   }
 
   void TCPClient::SucceedInitialRegistration(uint32_t img1, uint32_t img2, int num_reg_images, int num_points_3d) {
+    if (!normal_log) return;
     socket.send(Concat(
       "[Succeed Initial Registration]{", img1, ",", img2, "}\n",
       "    Used pair #", img1, ", #", img2, ".\n",
@@ -227,6 +234,7 @@ namespace mod {
   }
 
   void TCPClient::FailInitialRegistration(uint32_t img1, uint32_t img2, int num_reg_images, int num_points_3d) {
+    if (!normal_log) return;
     socket.send(Concat(
       "[Fail Initial Registration]{", img1, ",", img2, "}\n",
       "    Used pair #", img1, ", #", img2, ".\n",
@@ -237,6 +245,7 @@ namespace mod {
   }
 
   void TCPClient::FindNextImages(const std::vector<uint32_t>& next_images) {
+    if (!normal_log) return;
     std::string ids = "";
     for (uint32_t id: next_images) ids = Concat(ids, id, ",");
     if (ids.length()) ids.pop_back();
@@ -248,6 +257,7 @@ namespace mod {
   }
 
   void TCPClient::RegisterNextImage(uint32_t* next_image_id, int num_reg_images) {
+    if (!normal_log) return;
     socket.send(Concat(
       "[Register Next Image]\n",
       "    ", num_reg_images, " images are already registered.\n",
@@ -267,6 +277,7 @@ namespace mod {
   }
 
   void TCPClient::SucceedRegistration(uint32_t image_id, int num_reg_images, int num_points_3d) {
+    if (!normal_log) return;
     socket.send(Concat(
       "[Succeed Registration]{", image_id, "}\n",
       "    ", num_reg_images, " images are already registered.\n",
@@ -276,6 +287,7 @@ namespace mod {
   }
 
   void TCPClient::FailRegistration(uint32_t image_id, int num_reg_trials, int num_reg_images) {
+    if (!normal_log) return;
     socket.send(Concat(
       "[Fail Registration]{", image_id, "}\n",
       "    This is ", num_reg_trials + 1, "th register trial.\n",
@@ -285,6 +297,7 @@ namespace mod {
   }
 
   bool TCPClient::GiveUp() {
+    if (!normal_log) return false;
     socket.send(Concat(
       "[Give Up]\n",
       "    Do you want to give up registering rest images? y/n\n",
@@ -302,6 +315,7 @@ namespace mod {
   }
 
   void TCPClient::FailAllRegistration(bool* reg_next_success, bool* prev_reg_next_success) {
+    if (!normal_log) return;
     if (*reg_next_success) return;
     if (*prev_reg_next_success) {
       socket.send(Concat(
@@ -330,6 +344,7 @@ namespace mod {
   }
 
   void TCPClient::EndReconstruction(int num_init_trials, int num_reg_images, int num_points_3d) {
+    if (!normal_log) return;
     socket.send(Concat(
       "[End Reconstruction]\n",
       "    This is ", num_init_trials + 1, "th initial trial.\n",
@@ -338,5 +353,78 @@ namespace mod {
     ));
     Validate("acknowledge");
   }
+
+  void TCPClient::FailDueToBadOverlap(uint32_t img1, uint32_t img2) {
+    if (!failure_log) return;
+    socket.send(Concat(
+      "[Fail Due To Bad Overlap]{", img1, ",", img2, "}\n"
+    ));
+    Validate("acknowledge");
+  }
+
+
+  void TCPClient::FailDueToLittleTriAngle(uint32_t img1, uint32_t img2) {
+    if (!failure_log) return;
+    socket.send(Concat(
+      "[Fail Due To Little Tri Angle]{", img1, ",", img2, "}\n"
+    ));
+    Validate("acknowledge");
+  }
+
+  void TCPClient::FailDueToLittleVisible3DPoints(uint32_t img, const std::vector<double>& xys) {
+    if (!failure_log) return;
+    std::string string_xys;
+    for (double v : xys) {
+      string_xys += ",";
+      string_xys += std::to_string(static_cast<int>(v));
+    }
+    socket.send(Concat(
+      "[Fail Due To Little Visible 3D Points]{", img, string_xys, "}\n"
+    ));
+    Validate("acknowledge");
+  }
+
+  void TCPClient::FailDueToLittleTri2DPoints(uint32_t img, const std::vector<double>& xys) {
+    if (!failure_log) return;
+    std::string string_xys;
+    for (double v : xys) {
+      string_xys += ",";
+      string_xys += std::to_string(static_cast<int>(v));
+    }
+    socket.send(Concat(
+      "[Fail Due To Little Tri 2D Points]{", img, string_xys, "}\n"
+    ));
+    Validate("acknowledge");
+  }
+
+  void TCPClient::FailDueToBadPoseEstimation(uint32_t img) {
+    if (!failure_log) return;
+    socket.send(Concat(
+      "[Fail Due To Bad Pose Estimation]{", img, "}\n"
+    ));
+    Validate("acknowledge");
+  }
+
+  void TCPClient::FailDueToLittle2DInliers(uint32_t img, const std::vector<double>& xys) {
+    if (!failure_log) return;
+    std::string string_xys;
+    for (double v : xys) {
+      string_xys += ",";
+      string_xys += std::to_string(static_cast<int>(v));
+    }
+    socket.send(Concat(
+      "[Fail Due To Little 2D Inliers]{", img, string_xys, "}\n"
+    ));
+    Validate("acknowledge");
+  }
+
+  void TCPClient::FailDueToBadPoseRefinement(uint32_t img) {
+    if (!failure_log) return;
+    socket.send(Concat(
+      "[Fail Due To Bad Pose Refinement]{", img, "}\n"
+    ));
+    Validate("acknowledge");
+  }
+
 
 } // namespace mod
