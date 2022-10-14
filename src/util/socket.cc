@@ -117,7 +117,6 @@ namespace mod {
 
 
   void TCPClient::BeginReconstruction(int num_init_trials) {
-    if (!normal_log) return;
     socket.send(Concat(
       "[Begin Reconstruction]\n",
       "    This is ", num_init_trials + 1, "th initial trial.\n"
