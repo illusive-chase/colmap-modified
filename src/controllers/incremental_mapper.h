@@ -104,6 +104,8 @@ struct IncrementalMapperOptions {
   // The maximum number of local bundle adjustment iterations.
   int ba_local_max_num_iterations = 25;
 
+  bool ba_global = true;
+
   // Whether to use PBA in global bundle adjustment.
   bool ba_global_use_pba = false;
 

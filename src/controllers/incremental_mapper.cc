@@ -494,7 +494,8 @@ void IncrementalMapperController::Reconstruct(
         break;
       }
 
-      AdjustGlobalBundle(*options_, &mapper);
+      if (options_.ba_global)
+        AdjustGlobalBundle(*options_, &mapper);
       FilterPoints(*options_, &mapper);
       FilterImages(*options_, &mapper);
 
@@ -575,17 +576,19 @@ void IncrementalMapperController::Reconstruct(
           TriangulateImage(*options_, next_image, &mapper);
           IterativeLocalRefinement(*options_, next_image_id, &mapper);
 
-          if (reconstruction.NumRegImages() >=
-                  options_->ba_global_images_ratio * ba_prev_num_reg_images ||
-              reconstruction.NumRegImages() >=
-                  options_->ba_global_images_freq + ba_prev_num_reg_images ||
-              reconstruction.NumPoints3D() >=
-                  options_->ba_global_points_ratio * ba_prev_num_points ||
-              reconstruction.NumPoints3D() >=
-                  options_->ba_global_points_freq + ba_prev_num_points) {
-            IterativeGlobalRefinement(*options_, &mapper);
-            ba_prev_num_points = reconstruction.NumPoints3D();
-            ba_prev_num_reg_images = reconstruction.NumRegImages();
+          if (options_.ba_global) {
+            if (reconstruction.NumRegImages() >=
+                    options_->ba_global_images_ratio * ba_prev_num_reg_images ||
+                reconstruction.NumRegImages() >=
+                    options_->ba_global_images_freq + ba_prev_num_reg_images ||
+                reconstruction.NumPoints3D() >=
+                    options_->ba_global_points_ratio * ba_prev_num_points ||
+                reconstruction.NumPoints3D() >=
+                    options_->ba_global_points_freq + ba_prev_num_points) {
+              IterativeGlobalRefinement(*options_, &mapper);
+              ba_prev_num_points = reconstruction.NumPoints3D();
+              ba_prev_num_reg_images = reconstruction.NumRegImages();
+            }
           }
 
           if (client_)
@@ -640,7 +643,8 @@ void IncrementalMapperController::Reconstruct(
       if (!reg_next_success && prev_reg_next_success) {
         reg_next_success = true;
         prev_reg_next_success = false;
-        IterativeGlobalRefinement(*options_, &mapper);
+        if (options_.ba_global)
+          IterativeGlobalRefinement(*options_, &mapper);
       } else {
         prev_reg_next_success = reg_next_success;
       }
@@ -653,7 +657,8 @@ void IncrementalMapperController::Reconstruct(
     }
 
     // Only run final global BA, if last incremental BA was not global.
-    if (reconstruction.NumRegImages() >= 2 &&
+    if (options_.ba_global &&
+        reconstruction.NumRegImages() >= 2 &&
         reconstruction.NumRegImages() != ba_prev_num_reg_images &&
         reconstruction.NumPoints3D() != ba_prev_num_points) {
       IterativeGlobalRefinement(*options_, &mapper);
