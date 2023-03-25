@@ -322,7 +322,7 @@ void IncrementalMapperController::Run() {
   }
 
   if (options_->tcp_port != -1) {
-    client_ = new mod::TCPClient("127.0.0.1", options_->tcp_port, !options_->nlog, !options_->flog);
+    client_ = new mod::TCPClient("127.0.0.1", options_->tcp_port, !options_->tcp_no_nlog, !options_->tcp_no_flog);
     if (!client_->Connected()) return;
     PrintHeading1(StringPrintf("Connected to 127.0.0.1:%d", options_->tcp_port));
   }
