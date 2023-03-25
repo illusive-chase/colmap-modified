@@ -450,12 +450,13 @@ void IncrementalMapperController::Reconstruct(
       if (client_) client_->FindInitialImagePair(&image_id1, &image_id2);
 
       // Try to find good initial pair.
-      if (options_->init_image_id1 == -1 || options_->init_image_id2 == -1) {
+      if (image_id1 == ~0U || image_id2 == ~0U) {
         PrintHeading1("Finding good initial image pair");
         
         const bool find_init_success = mapper.FindInitialImagePair(
             init_mapper_options, &image_id1, &image_id2);
         if (!find_init_success) {
+          if (client_) client_->EndReconstruction(num_trials, 0, 0);
           std::cout << "  => No good initial image pair found." << std::endl;
           mapper.EndReconstruction(kDiscardReconstruction);
           reconstruction_manager_->Delete(reconstruction_idx);
@@ -464,6 +465,7 @@ void IncrementalMapperController::Reconstruct(
       } else {
         if (!reconstruction.ExistsImage(image_id1) ||
             !reconstruction.ExistsImage(image_id2)) {
+          if (client_) client_->EndReconstruction(num_trials, 0, 0);
           std::cout << StringPrintf(
                            "  => Initial image pair #%d and #%d do not exist.",
                            image_id1, image_id2)
@@ -481,8 +483,10 @@ void IncrementalMapperController::Reconstruct(
       const bool reg_init_success = mapper.RegisterInitialImagePair(
           init_mapper_options, image_id1, image_id2, client_);
       if (!reg_init_success) {
-        if (client_)
+        if (client_) {
           client_->FailInitialization(image_id1, image_id2, init_mapper_options.init_min_tri_angle, init_mapper_options.init_min_num_inliers);
+          client_->EndReconstruction(num_trials, 0, 0);
+        }
         std::cout << "  => Initialization failed - possible solutions:"
                   << std::endl
                   << "     - try to relax the initialization constraints"
@@ -505,6 +509,7 @@ void IncrementalMapperController::Reconstruct(
         if (client_) {
           client_->FailInitialRegistration(image_id1, image_id2, reconstruction.NumRegImages(), reconstruction.NumPoints3D());
           client_->FailDueToLittleTriAngle(image_id1, image_id2);
+          client_->EndReconstruction(num_trials, reconstruction.NumRegImages(), reconstruction.NumPoints3D());
         }
         mapper.EndReconstruction(kDiscardReconstruction);
         reconstruction_manager_->Delete(reconstruction_idx);
