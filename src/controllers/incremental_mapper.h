@@ -45,6 +45,12 @@ struct IncrementalMapperOptions {
   // The port used to interact
   int tcp_port = -1;
 
+  // The port used to interact
+  bool tcp_no_nlog = false;
+
+  // The port used to interact
+  bool tcp_no_flog = false;
+
   // The minimum number of matches for inlier matches to be considered.
   int min_num_matches = 15;
 

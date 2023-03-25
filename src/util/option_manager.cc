@@ -477,6 +477,10 @@ void OptionManager::AddMapperOptions() {
 
   AddAndRegisterDefaultOption("Mapper.tcp_port",
                               &mapper->tcp_port);
+  AddAndRegisterDefaultOption("Mapper.tcp_no_nlog",
+                              &mapper->tcp_no_nlog);
+  AddAndRegisterDefaultOption("Mapper.tcp_no_flog",
+                              &mapper->tcp_no_flog);
   AddAndRegisterDefaultOption("Mapper.min_num_matches",
                               &mapper->min_num_matches);
   AddAndRegisterDefaultOption("Mapper.ignore_watermarks",
