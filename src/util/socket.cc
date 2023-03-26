@@ -51,6 +51,7 @@ namespace mod {
     if (::connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
       ::perror("connect failed");
       close();
+      ::exit(255);
     }
   }
 
@@ -66,7 +67,8 @@ namespace mod {
   bool Socket::send(const std::string& data) {
     if (::send(sock, data.c_str(), data.length() + 1, 0) < 0) {
       ::perror("send failed");
-      return false;
+      close();
+      ::exit(255);
     }
     return true;
   }
@@ -82,7 +84,8 @@ namespace mod {
       }
       if (len < 0) {
         ::perror("recv failed");
-        break;
+        close();
+        ::exit(255);
       }
       buffer[len] = 0;
       reply += buffer;
