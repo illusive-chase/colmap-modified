@@ -148,14 +148,15 @@ void ExtractColors(const std::string& image_path, const image_t image_id,
 void WriteSnapshot(const Reconstruction& reconstruction,
                    const std::string& snapshot_path) {
   PrintHeading1("Creating snapshot");
-  // Get the current timestamp in milliseconds.
-  const size_t timestamp =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::high_resolution_clock::now().time_since_epoch())
-          .count();
-  // Write reconstruction to unique path with current timestamp.
-  const std::string path =
-      JoinPaths(snapshot_path, StringPrintf("%010d", timestamp));
+  // // Get the current timestamp in milliseconds.
+  // const size_t timestamp =
+  //     std::chrono::duration_cast<std::chrono::milliseconds>(
+  //         std::chrono::high_resolution_clock::now().time_since_epoch())
+  //         .count();
+  // // Write reconstruction to unique path with current timestamp.
+  // const std::string path =
+  //     JoinPaths(snapshot_path, StringPrintf("%010d", timestamp));
+  const std::string path = snapshot_path;
   CreateDirIfNotExists(path);
   std::cout << "  => Writing to " << path << std::endl;
   reconstruction.Write(path);

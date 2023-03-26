@@ -2077,6 +2077,34 @@ void Reconstruction::WritePoints3DBinary(const std::string& path) const {
   }
 }
 
+void Reconstruction::WritePosesBinary(const std::string& path) const {
+  std::ofstream file(path, std::ios::trunc | std::ios::binary);
+  CHECK(file.is_open()) << path;
+
+  WriteBinaryLittleEndian<uint64_t>(&file, reg_image_ids_.size());
+
+  for (const auto& image : images_) {
+    if (!image.second.IsRegistered()) {
+      continue;
+    }
+
+    WriteBinaryLittleEndian<image_t>(&file, image.first);
+
+    const Eigen::Vector4d normalized_qvec =
+        NormalizeQuaternion(image.second.Qvec());
+    WriteBinaryLittleEndian<double>(&file, normalized_qvec(0));
+    WriteBinaryLittleEndian<double>(&file, normalized_qvec(1));
+    WriteBinaryLittleEndian<double>(&file, normalized_qvec(2));
+    WriteBinaryLittleEndian<double>(&file, normalized_qvec(3));
+
+    WriteBinaryLittleEndian<double>(&file, image.second.Tvec(0));
+    WriteBinaryLittleEndian<double>(&file, image.second.Tvec(1));
+    WriteBinaryLittleEndian<double>(&file, image.second.Tvec(2));
+
+    WriteBinaryLittleEndian<camera_t>(&file, image.second.CameraId());
+  }
+}
+
 void Reconstruction::SetObservationAsTriangulated(
     const image_t image_id, const point2D_t point2D_idx,
     const bool is_continued_point3D) {

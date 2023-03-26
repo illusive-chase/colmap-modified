@@ -410,6 +410,7 @@ class Reconstruction {
   void WriteCamerasBinary(const std::string& path) const;
   void WriteImagesBinary(const std::string& path) const;
   void WritePoints3DBinary(const std::string& path) const;
+  void WritePosesBinary(const std::string& path) const;
 
   void SetObservationAsTriangulated(const image_t image_id,
                                     const point2D_t point2D_idx,
