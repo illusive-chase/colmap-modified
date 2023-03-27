@@ -102,7 +102,7 @@ namespace mod {
   }
 
 
-  TCPClient::TCPClient(const std::string& address, int port, bool normal_log, bool failure_log):
+  TCPClient::TCPClient(const std::string& address, int port, bool normal_log, bool failure_log, bool major_log):
     socket(address, port),
     normal_log(normal_log),
     failure_log(failure_log),
