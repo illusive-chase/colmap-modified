@@ -28,11 +28,11 @@ public:
 class TCPClient {
 private:
   Socket socket;
-  bool normal_log, failure_log;
+  bool normal_log, failure_log, major_log;
   void Validate(const char* expected);
 
 public:
-  TCPClient(const std::string& address, int port, bool normal_log = true, bool failure_log = true);
+  TCPClient(const std::string& address, int port, bool normal_log = true, bool failure_log = true, bool major_log = true);
   TCPClient(const TCPClient&) = delete;
   bool Connected() const;
 

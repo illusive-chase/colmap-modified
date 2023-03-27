@@ -481,6 +481,8 @@ void OptionManager::AddMapperOptions() {
                               &mapper->tcp_no_nlog);
   AddAndRegisterDefaultOption("Mapper.tcp_no_flog",
                               &mapper->tcp_no_flog);
+  AddAndRegisterDefaultOption("Mapper.tcp_mlog",
+                              &mapper->tcp_mlog);
   AddAndRegisterDefaultOption("Mapper.min_num_matches",
                               &mapper->min_num_matches);
   AddAndRegisterDefaultOption("Mapper.ignore_watermarks",

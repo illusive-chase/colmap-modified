@@ -102,7 +102,12 @@ namespace mod {
   }
 
 
-  TCPClient::TCPClient(const std::string& address, int port, bool normal_log, bool failure_log): socket(address, port), normal_log(normal_log), failure_log(failure_log) {
+  TCPClient::TCPClient(const std::string& address, int port, bool normal_log, bool failure_log):
+    socket(address, port),
+    normal_log(normal_log),
+    failure_log(failure_log),
+    major_log(major_log)
+  {
     if (socket.connected()) {
       socket.send("connected");
       Validate("acknowledge");
@@ -128,7 +133,7 @@ namespace mod {
   }
 
   bool TCPClient::Abort() {
-    if (!normal_log) return false;
+    if (!normal_log && !major_log) return false;
     socket.send(Concat(
       "[Abort]\n",
       "    Do you want to abort this reconstruction? y/n\n"
@@ -145,7 +150,7 @@ namespace mod {
   }
 
   void TCPClient::FindInitialImagePair(uint32_t* img1, uint32_t* img2) {
-    if (!normal_log) return;
+    if (!normal_log && !major_log) return;
     if (*img1 == ~0U || *img2 == ~0U) {
       socket.send(Concat(
         "[Find Initial Image Pair]\n",
@@ -225,7 +230,7 @@ namespace mod {
   }
 
   void TCPClient::SucceedInitialRegistration(uint32_t img1, uint32_t img2, int num_reg_images, int num_points_3d) {
-    if (!normal_log) return;
+    if (!normal_log && !major_log) return;
     socket.send(Concat(
       "[Succeed Initial Registration]{", img1, ",", img2, "}\n",
       "    Used pair #", img1, ", #", img2, ".\n",
@@ -259,7 +264,7 @@ namespace mod {
   }
 
   void TCPClient::RegisterNextImage(uint32_t* next_image_id, int num_reg_images) {
-    if (!normal_log) return;
+    if (!normal_log && !major_log) return;
     socket.send(Concat(
       "[Register Next Image]\n",
       "    ", num_reg_images, " images are already registered.\n",
@@ -279,7 +284,7 @@ namespace mod {
   }
 
   void TCPClient::SucceedRegistration(uint32_t image_id, int num_reg_images, int num_points_3d) {
-    if (!normal_log) return;
+    if (!normal_log && !major_log) return;
     socket.send(Concat(
       "[Succeed Registration]{", image_id, "}\n",
       "    ", num_reg_images, " images are already registered.\n",
@@ -289,7 +294,7 @@ namespace mod {
   }
 
   void TCPClient::FailRegistration(uint32_t image_id, int num_reg_trials, int num_reg_images) {
-    if (!normal_log) return;
+    if (!normal_log && !major_log) return;
     socket.send(Concat(
       "[Fail Registration]{", image_id, "}\n",
       "    This is ", num_reg_trials + 1, "th register trial.\n",
@@ -299,7 +304,7 @@ namespace mod {
   }
 
   bool TCPClient::GiveUp() {
-    if (!normal_log) return false;
+    if (!normal_log && !major_log) return false;
     socket.send(Concat(
       "[Give Up]\n",
       "    Do you want to give up registering rest images? y/n\n",
@@ -317,7 +322,7 @@ namespace mod {
   }
 
   void TCPClient::FailAllRegistration(bool* reg_next_success, bool* prev_reg_next_success) {
-    if (!normal_log) return;
+    if (!normal_log && !major_log) return;
     if (*reg_next_success) return;
     if (*prev_reg_next_success) {
       socket.send(Concat(
@@ -346,7 +351,6 @@ namespace mod {
   }
 
   void TCPClient::EndReconstruction(int num_init_trials, int num_reg_images, int num_points_3d) {
-    if (!normal_log) return;
     socket.send(Concat(
       "[End Reconstruction]\n",
       "    This is ", num_init_trials + 1, "th initial trial.\n",
