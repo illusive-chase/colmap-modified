@@ -867,7 +867,7 @@ bool ExtractSiftFeaturesGPU(const SiftExtractionOptions& options,
   const std::vector<uint8_t> bitmap_raw_bits = bitmap.ConvertToRawBits();
   const int code =
       sift_gpu->RunSIFT(bitmap.ScanWidth(), bitmap.Height(),
-                        bitmap_raw_bits.data(), GL_LUMINANCE, GL_UNSIGNED_BYTE);
+                        bitmap_raw_bits.data(), 0x1909, 0x1401);
 
   const int kSuccessCode = 1;
   if (code != kSuccessCode) {
